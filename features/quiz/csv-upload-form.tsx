@@ -11,6 +11,38 @@ import { Upload, FileText, CheckCircle2, AlertCircle } from 'lucide-react'
 export function CsvUploadForm() {
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+
+    const droppedFile = e.dataTransfer.files?.[0]
+    if (droppedFile) {
+      const isCsv = droppedFile.name.toLowerCase().endsWith('.csv') || 
+                    droppedFile.type === 'text/csv' || 
+                    droppedFile.type === 'application/vnd.ms-excel'
+      
+      if (isCsv) {
+        setFile(droppedFile)
+      } else {
+        toast.error('CSVファイルのみを選択してください')
+      }
+    }
+  }
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,19 +83,36 @@ export function CsvUploadForm() {
       <CardContent>
         <form onSubmit={handleUpload} className="space-y-4">
           <div 
-            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer
+            className={`border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer
               ${file ? 'border-primary/50 bg-primary/5' : 'border-muted-foreground/20 hover:border-primary/30'}
+              ${isDragging ? 'border-primary bg-primary/10 scale-[1.02]' : 'scale-100'}
             `}
             onClick={() => document.getElementById('csv-input')?.click()}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
           >
             <Input
               id="csv-input"
               type="file"
               accept=".csv"
               className="hidden"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              onChange={(e) => {
+                const selectedFile = e.target.files?.[0]
+                if (selectedFile) {
+                  const isCsv = selectedFile.name.toLowerCase().endsWith('.csv') || 
+                                selectedFile.type === 'text/csv' || 
+                                selectedFile.type === 'application/vnd.ms-excel'
+                  if (isCsv) {
+                    setFile(selectedFile)
+                  } else {
+                    toast.error('CSVファイルのみを選択してください')
+                    e.target.value = ''
+                  }
+                }
+              }}
             />
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-2 pointer-events-none">
               {file ? (
                 <>
                   <FileText className="w-10 h-10 text-primary animate-in zoom-in" />
@@ -71,20 +120,22 @@ export function CsvUploadForm() {
                 </>
               ) : (
                 <>
-                  <Upload className="w-10 h-10 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">クリックまたはドラッグ＆ドロップして CSV ファイルを選択</p>
+                  <Upload className={`w-10 h-10 transition-colors ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <p className={`text-sm transition-colors ${isDragging ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                    クリックまたはドラッグ＆ドロップして CSV ファイルを選択
+                  </p>
                 </>
               )}
             </div>
           </div>
           <Button 
             type="submit" 
-            className="w-full font-bold h-12" 
+            className="w-full font-bold h-12 text-lg shadow-md hover:shadow-lg transition-all" 
             disabled={!file || isUploading}
           >
             {isUploading ? (
               <span className="flex items-center gap-2">
-                 <span className="w-4 h-4 rounded-full border-b-2 border-current animate-spin" />
+                 <span className="w-5 h-5 rounded-full border-b-2 border-current animate-spin" />
                  パース中...
               </span>
             ) : (
