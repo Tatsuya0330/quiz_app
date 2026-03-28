@@ -1,65 +1,113 @@
-import Image from "next/image";
+import { Suspense } from 'react'
+import { createClient } from '@/lib/supabase/server'
+import { getQuestions } from '@/features/quiz/data'
+import { DashboardStats } from '@/features/quiz/dashboard-stats'
+import { CsvUploadForm } from '@/features/quiz/csv-upload-form'
+import { QuizStartCard } from '@/features/quiz/quiz-start-card'
+import { Button } from '@/components/ui/button'
+import { Brain, Sparkles, Plus, Info, ListChecks, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { cn } from '@/lib/utils'
 
-export default function Home() {
+export default async function HomePage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const questions = await getQuestions()
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-muted/20 pb-20">
+      <header className="sticky top-0 z-10 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-16 items-center justify-between mx-auto px-4 max-w-5xl">
+          <div className="flex items-center gap-2 font-black text-2xl tracking-tighter">
+            <Brain className="w-8 h-8 text-primary" />
+            CSV Quiz App
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="hidden md:inline-block text-sm text-muted-foreground mr-4">
+              {user?.email}
+            </span>
+            <form action="/auth/sign-out" method="post">
+              <Button variant="ghost" size="sm" className="font-bold">ログアウト</Button>
+            </form>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </header>
+
+      <main className="container mx-auto px-4 py-8 space-y-10 max-w-5xl">
+        {/* レッスン進捗・統計 */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-black flex items-center gap-2">
+            <Sparkles className="w-6 h-6 text-yellow-500 fill-yellow-500" />
+            学習の状況
+          </h2>
+          <Suspense fallback={<div className="h-32 bg-muted animate-pulse rounded-2xl" />}>
+             <DashboardStats />
+          </Suspense>
+        </div>
+
+        {/* クイズ開始エリア */}
+        <div className="grid md:grid-cols-2 gap-6">
+          <QuizStartCard 
+            title="通常クイズ" 
+            description="全問題の中から指定数ランダムに出題されます"
+            icon={<Brain className="w-6 h-6" />}
+            mode="all"
+            variant="default"
+            disabled={questions.length === 0}
+          />
+          <QuizStartCard 
+            title="ニガテ克服クイズ" 
+            description="過去に間違えた問題から優先的に出題されます"
+            icon={<Sparkles className="w-6 h-6" />}
+            mode="mistakes"
+            variant="secondary"
+            disabled={questions.length === 0}
+          />
+        </div>
+
+        {questions.length === 0 && (
+          <Alert className="bg-primary/5 border-primary/20">
+            <Info className="h-4 w-4" />
+            <AlertTitle className="font-bold">問題が登録されていません</AlertTitle>
+            <AlertDescription>
+              CSVをアップロードして、自分だけのクイズを作成しましょう。
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className="grid lg:grid-cols-2 gap-10 pt-4">
+          <div className="space-y-6">
+            <h2 className="text-2xl font-black flex items-center gap-2">
+              <Plus className="w-6 h-6 text-primary" />
+              問題をインポート
+            </h2>
+            <CsvUploadForm />
+          </div>
+          <div className="space-y-6">
+            <h2 className="text-2xl font-black flex items-center gap-2">
+              <ListChecks className="w-6 h-6 text-primary" />
+              問題の管理
+            </h2>
+            <div className="bg-background border rounded-3xl p-8 flex flex-col items-center justify-center text-center space-y-6 shadow-xl">
+               <div className="p-4 bg-primary/10 rounded-full">
+                 <ListChecks className="w-12 h-12 text-primary" />
+               </div>
+               <div className="space-y-2">
+                 <h3 className="text-xl font-bold">登録済み問題一覧</h3>
+                 <p className="text-muted-foreground">
+                   これまでに登録した全 {questions.length} 問の確認・編集・削除が行えます。
+                 </p>
+               </div>
+               <Link href="/questions" className="w-full">
+                 <Button variant="outline" className="w-full h-14 text-lg font-black gap-2 hover:bg-primary hover:text-primary-foreground transition-all">
+                   問題リストを見る <ChevronRight className="w-5 h-5" />
+                 </Button>
+               </Link>
+            </div>
+          </div>
         </div>
       </main>
     </div>
-  );
+  )
 }
