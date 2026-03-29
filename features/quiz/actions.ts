@@ -35,6 +35,25 @@ export async function uploadCsv(formData: FormData) {
             }
           })
 
+          // 1日の上限チェック (200件)
+          const startOfDay = new Date()
+          startOfDay.setHours(0, 0, 0, 0)
+
+          const { count, error: countError } = await supabase
+            .from('questions')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .gte('created_at', startOfDay.toISOString())
+
+          if (countError) throw countError
+
+          const currentCount = count || 0
+          const limit = 200
+
+          if (currentCount + questionsToInsert.length > limit) {
+            throw new Error(`1日の登録上限（${limit}件）を超えています。本日はあと ${Math.max(0, limit - currentCount)} 件登録可能です。`)
+          }
+
           // Supabaseへ一括保存 (UPSERT: 既存の問題があれば上書き)
           const { error } = await supabase
             .from('questions')
