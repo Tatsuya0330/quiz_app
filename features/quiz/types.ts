@@ -11,6 +11,7 @@ export interface Question {
   reference_url: string | null
   created_at: string
   latest_result?: boolean
+  is_link_broken?: boolean | null
 }
 
 export interface QuizResult {

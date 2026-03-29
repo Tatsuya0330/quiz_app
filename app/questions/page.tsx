@@ -2,11 +2,16 @@ import { Suspense } from 'react'
 import { getQuestions } from '@/features/quiz/data'
 import { QuestionList } from '@/features/quiz/question-list'
 import { Button } from '@/components/ui/button'
+import { LinkVerifyButton } from '@/features/quiz/link-verify-button'
+import { getLatestLinkCheck } from '@/features/quiz/actions'
 import { Brain, ChevronLeft, ListChecks } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function QuestionsPage() {
-  const questions = await getQuestions()
+  const [questions, lastVerifiedAt] = await Promise.all([
+    getQuestions(),
+    getLatestLinkCheck()
+  ])
 
   return (
     <div className="min-h-screen bg-muted/20 pb-20">
@@ -34,6 +39,8 @@ export default async function QuestionsPage() {
             アップロードされた全てのクイズを確認・管理できます。カードをクリックすると詳細が表示されます。
           </p>
         </div>
+
+        <LinkVerifyButton lastVerifiedAt={lastVerifiedAt} />
 
         <Suspense fallback={<div className="space-y-4"><div className="h-20 bg-muted animate-pulse rounded-xl" /></div>}>
           <QuestionList questions={questions} />
