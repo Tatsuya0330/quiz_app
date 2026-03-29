@@ -35,10 +35,10 @@ export async function uploadCsv(formData: FormData) {
             }
           })
 
-          // Supabaseへ一括保存
+          // Supabaseへ一括保存 (UPSERT: 既存の問題があれば上書き)
           const { error } = await supabase
             .from('questions')
-            .insert(questionsToInsert)
+            .upsert(questionsToInsert, { onConflict: 'user_id,question' })
 
           if (error) throw error
 
