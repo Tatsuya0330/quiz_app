@@ -10,6 +10,7 @@ export interface Question {
   explain: string
   reference_url: string | null
   created_at: string
+  latest_result?: boolean
 }
 
 export interface QuizResult {

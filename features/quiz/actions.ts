@@ -94,6 +94,7 @@ export async function recordResult(questionId: string, selectedAnswer: string, i
       question_id: questionId,
       selected_answer: selectedAnswer,
       is_correct: isCorrect,
+      answered_at: new Date().toISOString(),
     })
 
   if (error) throw error

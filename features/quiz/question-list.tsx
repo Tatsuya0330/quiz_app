@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { deleteQuestion } from './actions'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Trash2, Eye, Info, CheckCircle2, Link as LinkIcon, FileText } from 'lucide-react'
+import { Trash2, Eye, Info, CheckCircle2, XCircle, Link as LinkIcon, FileText } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -63,6 +63,17 @@ export function QuestionList({ questions }: { questions: Question[] }) {
                     <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
                       <FileText className="w-3 h-3" /> Quiz ID: {q.id.split('-')[0]}
                     </span>
+                    {q.latest_result !== undefined && (
+                      <Badge variant="outline" className={cn(
+                        "font-black text-[10px] h-5 border-none gap-1",
+                        q.latest_result 
+                          ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400" 
+                          : "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400"
+                      )}>
+                        {q.latest_result ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                        {q.latest_result ? "直近: 正解" : "直近: 不正解"}
+                      </Badge>
+                    )}
                   </div>
                   <p className="font-bold text-lg leading-tight group-hover:text-primary transition-colors line-clamp-2 md:line-clamp-none">
                     {q.question}

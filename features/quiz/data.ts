@@ -7,9 +7,10 @@ export async function getQuestions(mode: 'all' | 'mistakes' = 'all'): Promise<Qu
 
   if (!user) return []
 
+  let questions: any[] = []
+
   if (mode === 'mistakes') {
     // 誤答した記録がある問題を抽出
-    // まず誤答した問題IDを取得
     const { data: results, error: resError } = await supabase
       .from('quiz_results')
       .select('question_id')
@@ -27,18 +28,37 @@ export async function getQuestions(mode: 'all' | 'mistakes' = 'all'): Promise<Qu
       .in('id', mistakeIds)
       .order('created_at', { ascending: false })
 
-    if (error) return []
-    return data as Question[]
+    if (error || !data) return []
+    questions = data
+  } else {
+    const { data, error } = await supabase
+      .from('questions')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+
+    if (error || !data) return []
+    questions = data
   }
 
-  const { data, error } = await supabase
-    .from('questions')
-    .select('*')
+  // 直近の回答記録をマッピング
+  const { data: latestResults } = await supabase
+    .from('quiz_results')
+    .select('question_id, is_correct')
     .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
+    .order('answered_at', { ascending: false })
 
-  if (error) return []
-  return data as Question[]
+  const latestResultMap = new Map<string, boolean>()
+  latestResults?.forEach((res: any) => {
+    if (!latestResultMap.has(res.question_id)) {
+      latestResultMap.set(res.question_id, res.is_correct)
+    }
+  })
+
+  return questions.map(q => ({
+    ...q,
+    latest_result: latestResultMap.get(q.id)
+  })) as Question[]
 }
 
 export async function getStats() {

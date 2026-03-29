@@ -37,12 +37,32 @@ export function QuizSession({ questions: initialQuestions, mode, limit, timeLimi
   const router = useRouter()
 
   useEffect(() => {
-    // セッション開始時のみシャッフルして制限数でスライス
-    if (questions.length === 0) {
-      const shuffled = [...initialQuestions].sort(() => Math.random() - 0.5).slice(0, limit)
-      setQuestions(shuffled)
+    // セッション開始時のみ出題順を決定
+    if (questions.length === 0 && initialQuestions.length > 0) {
+      const shuffle = (arr: Question[]) => [...arr].sort(() => Math.random() - 0.5)
+
+      let resultQuestions: Question[] = []
+
+      if (mode === 'all') {
+        // 優先度順（未回答 > 直近不正解 > 直近正解）にグループ分け
+        const notAnswered = initialQuestions.filter(q => q.latest_result === undefined)
+        const incorrect = initialQuestions.filter(q => q.latest_result === false)
+        const correct = initialQuestions.filter(q => q.latest_result === true)
+
+        // 各グループ内をシャッフルして結合し、制限数まで取り出す
+        resultQuestions = [
+          ...shuffle(notAnswered),
+          ...shuffle(incorrect),
+          ...shuffle(correct)
+        ].slice(0, limit)
+      } else {
+        // ニガテ克服モード等は単純シャッフル
+        resultQuestions = shuffle(initialQuestions).slice(0, limit)
+      }
+
+      setQuestions(resultQuestions)
     }
-  }, [initialQuestions, limit, questions.length])
+  }, [initialQuestions, limit, questions.length, mode])
 
   useEffect(() => {
     if (isFinished || questions.length === 0) return
