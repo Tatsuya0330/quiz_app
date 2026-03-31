@@ -62,6 +62,7 @@ export async function uploadCsv(formData: FormData) {
           if (error) throw error
 
           revalidatePath('/')
+          revalidatePath('/questions')
           resolve({ success: true, count: questionsToInsert.length })
         } catch (error: any) {
           console.error('CSV Import Error:', error)
@@ -102,6 +103,49 @@ export async function recordResult(questionId: string, selectedAnswer: string, i
   revalidatePath('/dashboard')
 }
 
+export async function createQuestion(data: z.infer<typeof QuestionSchema>) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  // バリデーション
+  const validated = QuestionSchema.parse(data)
+
+  const { error } = await supabase
+    .from('questions')
+    .insert({
+      ...validated,
+      user_id: user.id,
+      reference_url: validated.reference_url || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+
+  if (error) throw error
+
+  revalidatePath('/')
+  revalidatePath('/questions')
+}
+
+export async function bulkDeleteQuestions(ids: string[]) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  if (ids.length === 0) return
+
+  const { error } = await supabase
+    .from('questions')
+    .delete()
+    .in('id', ids)
+    .eq('user_id', user.id)
+
+  if (error) throw error
+
+  revalidatePath('/')
+  revalidatePath('/questions')
+}
+
 export async function deleteQuestion(id: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -116,6 +160,7 @@ export async function deleteQuestion(id: string) {
   if (error) throw error
 
   revalidatePath('/')
+  revalidatePath('/questions')
 }
 
 export async function updateQuestion(id: string, data: z.infer<typeof QuestionSchema>) {
@@ -139,6 +184,7 @@ export async function updateQuestion(id: string, data: z.infer<typeof QuestionSc
   if (error) throw error
 
   revalidatePath('/')
+  revalidatePath('/questions')
 }
 
 async function checkUrl(url: string): Promise<boolean> {
@@ -227,6 +273,7 @@ export async function verifyReferenceLinks() {
   })
 
   revalidatePath('/')
+  revalidatePath('/questions')
   return { count: questions.length }
 }
 

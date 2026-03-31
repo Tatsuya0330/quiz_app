@@ -1,10 +1,15 @@
 'use client'
 
-import { useState } from 'react'
-import { deleteQuestion, updateQuestion } from './actions'
+import { useState, useMemo } from 'react'
+import { deleteQuestion, updateQuestion, bulkDeleteQuestions } from './actions'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Trash2, Eye, Info, CheckCircle2, XCircle, Link as LinkIcon, FileText, Edit2, AlertCircle } from 'lucide-react'
+import { 
+  Trash2, Eye, Info, CheckCircle2, XCircle, 
+  Link as LinkIcon, FileText, Edit2, AlertCircle,
+  Download, CheckSquare, Square, X, Plus, Upload,
+  MoreVertical, ChevronDown
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { useForm } from 'react-hook-form'
@@ -13,6 +18,7 @@ import { QuestionSchema } from './utils'
 import { z } from 'zod'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -25,31 +31,217 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { Question } from './types'
+import { QuestionCreateDialog } from './question-create-dialog'
+import { CsvUploadForm } from './csv-upload-form'
+import Papa from 'papaparse'
 
 type QuestionFormData = z.infer<typeof QuestionSchema>
 
 export function QuestionList({ questions }: { questions: Question[] }) {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+  const [showImport, setShowImport] = useState(false)
+
+  const allSelected = questions.length > 0 && selectedIds.size === questions.length
+  const someSelected = selectedIds.size > 0 && selectedIds.size < questions.length
+
+  const handleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(questions.map(q => q.id)))
+    }
+  }
+
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds)
+    if (newSelected.has(id)) {
+      newSelected.delete(id)
+    } else {
+      newSelected.add(id)
+    }
+    setSelectedIds(newSelected)
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    if (!confirm(`${selectedIds.size} 件の問題を一括削除しますか？`)) return
+
+    setIsBulkDeleting(true)
+    try {
+      await bulkDeleteQuestions(Array.from(selectedIds))
+      toast.success(`${selectedIds.size} 件の問題を削除しました`)
+      setSelectedIds(new Set())
+    } catch (e: any) {
+      toast.error('一括削除に失敗しました: ' + e.message)
+    } finally {
+      setIsBulkDeleting(false)
+    }
+  }
+
+  const handleExportCsv = () => {
+    const exportData = questions
+      .filter(q => selectedIds.size === 0 || selectedIds.has(q.id))
+      .map(q => ({
+        question: q.question,
+        option_a: q.option_a,
+        option_b: q.option_b,
+        option_c: q.option_c,
+        option_d: q.option_d,
+        answer: q.answer,
+        explain: q.explain,
+        reference_url: q.reference_url || '',
+      }))
+
+    const csv = Papa.unparse(exportData)
+    const bom = '\uFEFF'
+    const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `quiz_questions_${new Date().toISOString().slice(0, 10)}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   if (questions.length === 0) return (
-    <div className="text-center py-20 bg-background border rounded-3xl shadow-inner space-y-4">
-      <div className="p-4 bg-muted rounded-full w-fit mx-auto">
-        <Info className="w-8 h-8 text-muted-foreground" />
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-3 bg-background/50 p-4 rounded-2xl border border-dashed">
+        <QuestionCreateDialog />
+        <Button variant="outline" className="font-bold gap-2" onClick={() => setShowImport(!showImport)}>
+          <Upload className="w-4 h-4" /> CSVインポート
+        </Button>
       </div>
-      <p className="text-muted-foreground font-medium">登録されている問題はありません。</p>
+
+      {showImport && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-6">
+            <CsvUploadForm />
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="text-center py-20 bg-background border rounded-3xl shadow-inner space-y-4">
+        <div className="p-4 bg-muted rounded-full w-fit mx-auto">
+          <Info className="w-8 h-8 text-muted-foreground" />
+        </div>
+        <p className="text-muted-foreground font-medium">登録されている問題はありません。</p>
+      </div>
     </div>
   )
 
   return (
     <div className="space-y-4">
+      {/* 操作ツールバー */}
+      <div className="sticky top-[4.1rem] z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-2">
+            <Checkbox 
+              id="select-all" 
+              checked={allSelected} 
+              onCheckedChange={handleSelectAll}
+              className="h-5 w-5 rounded-md border-2"
+            />
+            <Label htmlFor="select-all" className="text-sm font-bold cursor-pointer select-none">
+              {selectedIds.size > 0 ? `${selectedIds.size} 件選択中` : '全て選択'}
+            </Label>
+          </div>
+
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-200">
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                className="font-bold h-9 gap-2 px-4 shadow-sm"
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+              >
+                <Trash2 className="w-4 h-4" /> 一括削除
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="font-bold h-9 gap-2 px-4 border-primary/20 hover:bg-primary/5"
+                onClick={handleExportCsv}
+              >
+                <Download className="w-4 h-4" /> 選択分をエクスポート
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="hover:bg-muted font-bold h-9 px-2"
+                onClick={() => setSelectedIds(new Set())}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto">
+          <QuestionCreateDialog />
+          <Button 
+            variant="outline" 
+            size="default" 
+            className={cn("font-bold gap-2", showImport && "bg-muted")}
+            onClick={() => setShowImport(!showImport)}
+          >
+            <Upload className="w-4 h-4" /> {showImport ? "インポートを閉じる" : "CSVインポート"}
+          </Button>
+          {selectedIds.size === 0 && (
+            <Button 
+              variant="outline" 
+              size="default" 
+              className="font-bold gap-2"
+              onClick={handleExportCsv}
+            >
+              <Download className="w-4 h-4" /> 全てエクスポート
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {showImport && (
+        <Card className="border-primary/20 bg-primary/5 animate-in slide-in-from-top-2 duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold flex items-center gap-2">
+                <Upload className="w-4 h-4 text-primary" /> CSVファイルから一括登録
+              </h3>
+              <Button variant="ghost" size="sm" onClick={() => setShowImport(false)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <CsvUploadForm />
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-4">
         {questions.map((q) => (
-          <QuestionListItem key={q.id} question={q} />
+          <div key={q.id} className="flex gap-4 group">
+            <div className="flex items-center pt-5">
+              <Checkbox 
+                checked={selectedIds.has(q.id)}
+                onCheckedChange={() => toggleSelect(q.id)}
+                className="h-6 w-6 rounded-lg border-2 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+              />
+            </div>
+            <div className="flex-1">
+              <QuestionListItem 
+                question={q} 
+                isSelected={selectedIds.has(q.id)}
+              />
+            </div>
+          </div>
         ))}
       </div>
     </div>
   )
 }
 
-function QuestionListItem({ question: q }: { question: Question }) {
+function QuestionListItem({ question: q, isSelected }: { question: Question, isSelected?: boolean }) {
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [open, setOpen] = useState(false)
@@ -125,11 +317,16 @@ function QuestionListItem({ question: q }: { question: Question }) {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         nativeButton={false}
-        render={<Card className="overflow-hidden group hover:border-primary/50 transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-[0.99] bg-background" />}
+        render={
+          <Card className={cn(
+            "overflow-hidden group hover:border-primary/50 transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-[0.99] bg-background",
+            isSelected && "border-primary bg-primary/5 ring-1 ring-primary"
+          )} />
+        }
       >
         <CardContent className="p-5 flex items-start justify-between gap-6">
           <div className="space-y-2 flex-1">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Badge variant="outline" className="font-black text-xs text-primary bg-primary/5">
                 作成日: {new Date(q.created_at).toLocaleDateString()}
               </Badge>

@@ -147,5 +147,6 @@ trigger: always_on
 * 型安全を担保する（TypeScriptを厳密に使用）
 * コメントは必要最小限にする（冗長にしない）
 * Implementation Plan, Task, Walkthroughの内容はすべて日本語で表記すること
+* 必要に応じてReadme.mdを更新すること
 
 ---

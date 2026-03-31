@@ -76,16 +76,9 @@ export default async function HomePage() {
           </Alert>
         )}
 
-        <div className="grid lg:grid-cols-2 gap-10 pt-4">
-          <div className="space-y-6">
-            <h2 className="text-2xl font-black flex items-center gap-2">
-              <Plus className="w-6 h-6 text-primary" />
-              問題をインポート
-            </h2>
-            <CsvUploadForm />
-          </div>
-          <div className="space-y-6">
-            <h2 className="text-2xl font-black flex items-center gap-2">
+        <div className="pt-4">
+          <div className="space-y-6 max-w-2xl mx-auto">
+            <h2 className="text-2xl font-black flex items-center gap-2 justify-center">
               <ListChecks className="w-6 h-6 text-primary" />
               問題の管理
             </h2>
@@ -97,11 +90,12 @@ export default async function HomePage() {
                  <h3 className="text-xl font-bold">登録済み問題一覧</h3>
                  <p className="text-muted-foreground">
                    これまでに登録した全 {questions.length} 問の確認・編集・削除が行えます。
+                   新規作成や CSV インポート・エクスポートもこちらから。
                  </p>
                </div>
                <Link href="/questions" className="w-full">
                  <Button variant="outline" className="w-full h-14 text-lg font-black gap-2 hover:bg-primary hover:text-primary-foreground transition-all">
-                   問題リストを見る <ChevronRight className="w-5 h-5" />
+                   問題の管理ページへ <ChevronRight className="w-5 h-5" />
                  </Button>
                </Link>
             </div>
