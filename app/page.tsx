@@ -10,6 +10,8 @@ import Link from 'next/link'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { cn } from '@/lib/utils'
 
+import { ThemeToggle } from '@/components/theme-toggle'
+
 export default async function HomePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -23,10 +25,11 @@ export default async function HomePage() {
             <Brain className="w-8 h-8 text-primary" />
             CSV Quiz App
           </div>
-          <div className="flex items-center gap-4">
-            <span className="hidden md:inline-block text-sm text-muted-foreground mr-4">
+          <div className="flex items-center gap-2">
+            <span className="hidden md:inline-block text-sm text-muted-foreground mr-2">
               {user?.email}
             </span>
+            <ThemeToggle />
             <form action="/auth/sign-out" method="post">
               <Button variant="ghost" size="sm" className="font-bold">ログアウト</Button>
             </form>

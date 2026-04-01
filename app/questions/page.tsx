@@ -7,6 +7,8 @@ import { getLatestLinkCheck } from '@/features/quiz/actions'
 import { Brain, ChevronLeft, ListChecks } from 'lucide-react'
 import Link from 'next/link'
 
+import { ThemeToggle } from '@/components/theme-toggle'
+
 export default async function QuestionsPage() {
   const [questions, lastVerifiedAt] = await Promise.all([
     getQuestions(),
@@ -21,11 +23,14 @@ export default async function QuestionsPage() {
             <Brain className="w-6 h-6 text-primary" />
             CSV Quiz App
           </Link>
-          <Link href="/">
-            <Button variant="ghost" size="sm" className="font-bold gap-1">
-              <ChevronLeft className="w-4 h-4" /> ホームに戻る
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="font-bold gap-1">
+                <ChevronLeft className="w-4 h-4" /> ホームに戻る
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
