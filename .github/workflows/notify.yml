@@ -1,0 +1,36 @@
+name: Notify Discord
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Discord Notification
+        run: |
+          curl -H "Content-Type: application/json" \
+          -X POST \
+          -d '{
+              "embeds": [{
+                "title": "quiz_appに新しいpushがありました!",
+                "description": "ユーザー: ${{ github.actor }}\nリポジトリ: ${{ github.repository }}",
+                "color": 5814783,
+                "fields": [
+                  {
+                    "name": "ブランチ",
+                    "value": "${{ github.ref }}",
+                    "inline": true
+                  },
+                  {
+                    "name": "コミットメッセージ",
+                    "value": "${{ github.event.head_commit.message }}",
+                    "inline": false
+                  }
+                ],
+              }]
+          }' \
+          ${{ secrets.DISCORD_WEBHOOK_URL }}
