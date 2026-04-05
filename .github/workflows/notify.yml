@@ -28,7 +28,7 @@ jobs:
                     "value": "${{ github.event.head_commit.message }}",
                     "inline": false
                   }
-                ],
+                ]
               }]
           }' \
           ${{ secrets.DISCORD_WEBHOOK_URL }}
